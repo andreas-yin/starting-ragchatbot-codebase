@@ -15,7 +15,7 @@ class Config:
     ANTHROPIC_BASE_URL: str = os.getenv("ANTHROPIC_BASE_URL", "")
     ANTHROPIC_AUTH_TOKEN: str = os.getenv("ANTHROPIC_AUTH_TOKEN", "")
 
-    ANTHROPIC_MODEL: str = "claude-sonnet-4-20250514"
+    ANTHROPIC_MODEL: str = "claude-sonnet-4-6"
 
     # Embedding model settings
     EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"

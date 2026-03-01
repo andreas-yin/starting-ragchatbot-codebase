@@ -33,7 +33,9 @@ Provide only the direct answer to what was asked.
 
     def __init__(self, api_key: str, base_url: str, auth_token: str, model: str):
         self.client = anthropic.Anthropic(
-            api_key=api_key, base_url=base_url, auth_token=auth_token
+            api_key=api_key,
+            base_url=base_url or None,
+            auth_token=auth_token or None,
         )
         self.model = model
 
