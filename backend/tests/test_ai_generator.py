@@ -103,8 +103,8 @@ def test_execute_tool_called_with_correct_args(generator, tool_manager):
     )
 
 
-def test_second_api_call_excludes_tools_and_tool_choice(generator, tool_manager):
-    """KEY TEST: the follow-up call must not include tools or tool_choice."""
+def test_second_api_call_includes_tools_for_possible_chaining(generator, tool_manager):
+    """The intermediate call re-offers tools so Claude can optionally chain a second search."""
     gen, mock_client = generator
     tool_resp = make_tool_response("search_course_content", "tu-3", {"query": "x"})
     text_resp = make_text_response("Answer")
@@ -118,8 +118,8 @@ def test_second_api_call_excludes_tools_and_tool_choice(generator, tool_manager)
 
     assert mock_client.messages.create.call_count == 2
     second_kwargs = mock_client.messages.create.call_args_list[1].kwargs
-    assert "tools" not in second_kwargs
-    assert "tool_choice" not in second_kwargs
+    assert "tools" in second_kwargs
+    assert "tool_choice" in second_kwargs
 
 
 def test_second_api_call_messages_contain_tool_result(generator, tool_manager):
@@ -190,3 +190,118 @@ def test_api_exception_propagates_from_generate_response(generator):
 
     with pytest.raises(RuntimeError, match="API failure"):
         gen.generate_response(query="test", tools=None, tool_manager=None)
+
+
+# ---------------------------------------------------------------------------
+# Two-round tool-use path
+# ---------------------------------------------------------------------------
+
+def _two_round_side_effects():
+    """Return (tool_resp_1, tool_resp_2, text_resp) for two-round tests."""
+    tool_resp_1 = make_tool_response("search_course_content", "tu-r1", {"query": "first"})
+    tool_resp_2 = make_tool_response("search_course_content", "tu-r2", {"query": "second"})
+    text_resp = make_text_response("Two-round final answer")
+    return tool_resp_1, tool_resp_2, text_resp
+
+
+def test_two_tool_rounds_makes_three_api_calls(generator, tool_manager):
+    gen, mock_client = generator
+    tool_resp_1, tool_resp_2, text_resp = _two_round_side_effects()
+    mock_client.messages.create.side_effect = [tool_resp_1, tool_resp_2, text_resp]
+
+    gen.generate_response(
+        query="multi-step question",
+        tools=[{"name": "search_course_content"}],
+        tool_manager=tool_manager,
+    )
+
+    assert mock_client.messages.create.call_count == 3
+
+
+def test_intermediate_call_includes_tools(generator, tool_manager):
+    gen, mock_client = generator
+    tool_resp_1, tool_resp_2, text_resp = _two_round_side_effects()
+    mock_client.messages.create.side_effect = [tool_resp_1, tool_resp_2, text_resp]
+
+    gen.generate_response(
+        query="multi-step question",
+        tools=[{"name": "search_course_content"}],
+        tool_manager=tool_manager,
+    )
+
+    second_kwargs = mock_client.messages.create.call_args_list[1].kwargs
+    assert "tools" in second_kwargs
+    assert "tool_choice" in second_kwargs
+
+
+def test_synthesis_call_after_two_rounds_excludes_tools(generator, tool_manager):
+    gen, mock_client = generator
+    tool_resp_1, tool_resp_2, text_resp = _two_round_side_effects()
+    mock_client.messages.create.side_effect = [tool_resp_1, tool_resp_2, text_resp]
+
+    gen.generate_response(
+        query="multi-step question",
+        tools=[{"name": "search_course_content"}],
+        tool_manager=tool_manager,
+    )
+
+    third_kwargs = mock_client.messages.create.call_args_list[2].kwargs
+    assert "tools" not in third_kwargs
+    assert "tool_choice" not in third_kwargs
+
+
+def test_two_tool_rounds_executes_both_tools(generator, tool_manager):
+    gen, mock_client = generator
+    tool_resp_1 = make_tool_response("search_course_content", "tu-r1", {"query": "first"})
+    tool_resp_2 = make_tool_response("get_course_outline", "tu-r2", {"course_name": "Python"})
+    text_resp = make_text_response("Two-round final answer")
+    mock_client.messages.create.side_effect = [tool_resp_1, tool_resp_2, text_resp]
+
+    gen.generate_response(
+        query="multi-step question",
+        tools=[{"name": "search_course_content"}, {"name": "get_course_outline"}],
+        tool_manager=tool_manager,
+    )
+
+    assert tool_manager.execute_tool.call_count == 2
+    tool_manager.execute_tool.assert_any_call("search_course_content", query="first")
+    tool_manager.execute_tool.assert_any_call("get_course_outline", course_name="Python")
+
+
+def test_two_tool_rounds_returns_final_text(generator, tool_manager):
+    gen, mock_client = generator
+    tool_resp_1, tool_resp_2, text_resp = _two_round_side_effects()
+    mock_client.messages.create.side_effect = [tool_resp_1, tool_resp_2, text_resp]
+
+    result = gen.generate_response(
+        query="multi-step question",
+        tools=[{"name": "search_course_content"}],
+        tool_manager=tool_manager,
+    )
+
+    assert result == "Two-round final answer"
+
+
+def test_messages_accumulate_across_two_rounds(generator, tool_manager):
+    gen, mock_client = generator
+    tool_resp_1, tool_resp_2, text_resp = _two_round_side_effects()
+    mock_client.messages.create.side_effect = [tool_resp_1, tool_resp_2, text_resp]
+
+    gen.generate_response(
+        query="multi-step question",
+        tools=[{"name": "search_course_content"}],
+        tool_manager=tool_manager,
+    )
+
+    # Third call (synthesis) should have 5 messages:
+    # user, assistant(tool_use_1), user(tool_result_1), assistant(tool_use_2), user(tool_result_2)
+    third_kwargs = mock_client.messages.create.call_args_list[2].kwargs
+    messages = third_kwargs["messages"]
+    assert len(messages) == 5
+    assert messages[0]["role"] == "user"
+    assert messages[1]["role"] == "assistant"
+    assert messages[2]["role"] == "user"
+    assert messages[2]["content"][0]["type"] == "tool_result"
+    assert messages[3]["role"] == "assistant"
+    assert messages[4]["role"] == "user"
+    assert messages[4]["content"][0]["type"] == "tool_result"
