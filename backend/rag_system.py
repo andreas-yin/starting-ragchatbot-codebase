@@ -170,4 +170,3 @@ class RAGSystem:
             "total_courses": self.vector_store.get_course_count(),
             "course_titles": self.vector_store.get_existing_course_titles(),
         }
-

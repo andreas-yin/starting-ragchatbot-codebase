@@ -13,10 +13,10 @@ from unittest.mock import MagicMock
 
 from vector_store import SearchResults
 
-
 # ---------------------------------------------------------------------------
 # Plain helper factories (import these directly in test files when needed)
 # ---------------------------------------------------------------------------
+
 
 def make_search_results(docs, metas):
     """Return a SearchResults with the given documents and metadata."""
@@ -56,6 +56,7 @@ def make_text_response(text):
 # pytest fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def empty_search_results():
     return SearchResults(documents=[], metadata=[], distances=[])
@@ -65,6 +66,7 @@ def empty_search_results():
 def error_search_results():
     def _factory(msg):
         return SearchResults.empty(msg)
+
     return _factory
 
 

@@ -4,10 +4,10 @@ import pytest
 
 from rag_system import RAGSystem
 
-
 # ---------------------------------------------------------------------------
 # Fixture: RAGSystem with all heavy dependencies mocked out
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def rag_setup():
@@ -50,6 +50,7 @@ def rag_setup():
 # Happy path
 # ---------------------------------------------------------------------------
 
+
 def test_query_returns_response_and_sources(rag_setup):
     rag, mock_ai, _ = rag_setup
     mock_ai.generate_response.return_value = "Test answer"
@@ -87,6 +88,7 @@ def test_query_passes_tool_definitions_to_generator(rag_setup):
 # Session handling
 # ---------------------------------------------------------------------------
 
+
 def test_query_with_session_id_passes_history(rag_setup):
     rag, mock_ai, mock_session = rag_setup
     mock_session.get_conversation_history.return_value = "Previous: User asked about X"
@@ -114,17 +116,22 @@ def test_session_exchange_recorded_after_response(rag_setup):
 
     rag.query("What is X?", session_id="sess-456")
 
-    mock_session.add_exchange.assert_called_once_with("sess-456", "What is X?", "The answer")
+    mock_session.add_exchange.assert_called_once_with(
+        "sess-456", "What is X?", "The answer"
+    )
 
 
 # ---------------------------------------------------------------------------
 # Sources lifecycle
 # ---------------------------------------------------------------------------
 
+
 def test_sources_from_search_tool_returned(rag_setup):
     rag, _, _ = rag_setup
     # Simulate that a tool search populated last_sources before query() collects them
-    rag.search_tool.last_sources = [{"label": "Course A - Lesson 1", "url": "http://a.com"}]
+    rag.search_tool.last_sources = [
+        {"label": "Course A - Lesson 1", "url": "http://a.com"}
+    ]
 
     _, sources = rag.query("question")
 
@@ -143,6 +150,7 @@ def test_sources_reset_after_query(rag_setup):
 # ---------------------------------------------------------------------------
 # Error propagation
 # ---------------------------------------------------------------------------
+
 
 def test_exception_from_generator_propagates(rag_setup):
     """Exceptions from generate_response must bubble up to app.py (no silent swallowing)."""
