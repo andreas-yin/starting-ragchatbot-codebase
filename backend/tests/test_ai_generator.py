@@ -5,10 +5,10 @@ import pytest
 from conftest import make_tool_response, make_text_response
 from ai_generator import AIGenerator
 
-
 # ---------------------------------------------------------------------------
 # Fixture: AIGenerator with mocked Anthropic client
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def generator():
@@ -31,11 +31,14 @@ def tool_manager():
 # Direct response (no tool use)
 # ---------------------------------------------------------------------------
 
+
 def test_direct_response_returns_text(generator):
     gen, mock_client = generator
     mock_client.messages.create.return_value = make_text_response("Direct answer")
 
-    result = gen.generate_response(query="What is Python?", tools=None, tool_manager=None)
+    result = gen.generate_response(
+        query="What is Python?", tools=None, tool_manager=None
+    )
 
     assert result == "Direct answer"
 
@@ -68,6 +71,7 @@ def test_conversation_history_appended_to_system_prompt(generator):
 # ---------------------------------------------------------------------------
 # Tool-use path — where content queries fail
 # ---------------------------------------------------------------------------
+
 
 def test_tool_use_triggers_handle_tool_execution(generator, tool_manager):
     gen, mock_client = generator
@@ -184,6 +188,7 @@ def test_final_response_text_returned(generator, tool_manager):
 # Exception propagation
 # ---------------------------------------------------------------------------
 
+
 def test_api_exception_propagates_from_generate_response(generator):
     gen, mock_client = generator
     mock_client.messages.create.side_effect = RuntimeError("API failure")
@@ -196,10 +201,15 @@ def test_api_exception_propagates_from_generate_response(generator):
 # Two-round tool-use path
 # ---------------------------------------------------------------------------
 
+
 def _two_round_side_effects():
     """Return (tool_resp_1, tool_resp_2, text_resp) for two-round tests."""
-    tool_resp_1 = make_tool_response("search_course_content", "tu-r1", {"query": "first"})
-    tool_resp_2 = make_tool_response("search_course_content", "tu-r2", {"query": "second"})
+    tool_resp_1 = make_tool_response(
+        "search_course_content", "tu-r1", {"query": "first"}
+    )
+    tool_resp_2 = make_tool_response(
+        "search_course_content", "tu-r2", {"query": "second"}
+    )
     text_resp = make_text_response("Two-round final answer")
     return tool_resp_1, tool_resp_2, text_resp
 
@@ -252,8 +262,12 @@ def test_synthesis_call_after_two_rounds_excludes_tools(generator, tool_manager)
 
 def test_two_tool_rounds_executes_both_tools(generator, tool_manager):
     gen, mock_client = generator
-    tool_resp_1 = make_tool_response("search_course_content", "tu-r1", {"query": "first"})
-    tool_resp_2 = make_tool_response("get_course_outline", "tu-r2", {"course_name": "Python"})
+    tool_resp_1 = make_tool_response(
+        "search_course_content", "tu-r1", {"query": "first"}
+    )
+    tool_resp_2 = make_tool_response(
+        "get_course_outline", "tu-r2", {"course_name": "Python"}
+    )
     text_resp = make_text_response("Two-round final answer")
     mock_client.messages.create.side_effect = [tool_resp_1, tool_resp_2, text_resp]
 
@@ -265,7 +279,9 @@ def test_two_tool_rounds_executes_both_tools(generator, tool_manager):
 
     assert tool_manager.execute_tool.call_count == 2
     tool_manager.execute_tool.assert_any_call("search_course_content", query="first")
-    tool_manager.execute_tool.assert_any_call("get_course_outline", course_name="Python")
+    tool_manager.execute_tool.assert_any_call(
+        "get_course_outline", course_name="Python"
+    )
 
 
 def test_two_tool_rounds_returns_final_text(generator, tool_manager):

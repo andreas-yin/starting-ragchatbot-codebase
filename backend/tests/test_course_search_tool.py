@@ -6,10 +6,10 @@ from conftest import make_search_results
 from search_tools import CourseSearchTool
 from vector_store import SearchResults
 
-
 # ---------------------------------------------------------------------------
 # Happy path
 # ---------------------------------------------------------------------------
+
 
 def test_execute_returns_formatted_results():
     store = MagicMock()
@@ -64,6 +64,7 @@ def test_last_sources_populated_after_search():
 # Empty / missing results
 # ---------------------------------------------------------------------------
 
+
 def test_execute_empty_results_returns_no_content_message():
     store = MagicMock()
     store.search.return_value = SearchResults(documents=[], metadata=[], distances=[])
@@ -98,6 +99,7 @@ def test_last_sources_empty_when_no_results():
 # ---------------------------------------------------------------------------
 # Error path — key for the "query failed" hypothesis
 # ---------------------------------------------------------------------------
+
 
 def test_execute_returns_error_string_from_store():
     store = MagicMock()

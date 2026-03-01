@@ -107,7 +107,11 @@ class CourseSearchTool(Tool):
             label = course_title
             if lesson_num is not None:
                 label += f" - Lesson {lesson_num}"
-            url = self.store.get_lesson_link(course_title, lesson_num) if lesson_num is not None else None
+            url = (
+                self.store.get_lesson_link(course_title, lesson_num)
+                if lesson_num is not None
+                else None
+            )
             sources.append({"label": label, "url": url})
 
             formatted.append(f"{header}\n{doc}")
@@ -147,7 +151,9 @@ class CourseOutlineTool(Tool):
         if not outline:
             return f"No course found matching '{course_name}'."
 
-        self.last_sources = [{"label": outline["title"], "url": outline.get("course_link")}]
+        self.last_sources = [
+            {"label": outline["title"], "url": outline.get("course_link")}
+        ]
 
         lines = [
             f"Course: {outline['title']}",
@@ -156,7 +162,9 @@ class CourseOutlineTool(Tool):
             "Lessons:",
         ]
         for lesson in outline.get("lessons", []):
-            lines.append(f"  Lesson {lesson['lesson_number']}: {lesson['lesson_title']}")
+            lines.append(
+                f"  Lesson {lesson['lesson_number']}: {lesson['lesson_title']}"
+            )
 
         return "\n".join(lines)
 
@@ -199,4 +207,3 @@ class ToolManager:
         for tool in self.tools.values():
             if hasattr(tool, "last_sources"):
                 tool.last_sources = []
-

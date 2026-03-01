@@ -146,13 +146,17 @@ Provide only the direct answer to what was asked.
                     "tools": base_params["tools"],
                     "tool_choice": {"type": "auto"},
                 }
-                intermediate_response = self.client.messages.create(**intermediate_params)
+                intermediate_response = self.client.messages.create(
+                    **intermediate_params
+                )
 
                 if intermediate_response.stop_reason != "tool_use":
                     return intermediate_response.content[0].text
 
                 # Claude called another tool — continue to next round
-                messages.append({"role": "assistant", "content": intermediate_response.content})
+                messages.append(
+                    {"role": "assistant", "content": intermediate_response.content}
+                )
                 current_response = intermediate_response
 
         # Max rounds reached — synthesize without tools
@@ -162,4 +166,3 @@ Provide only the direct answer to what was asked.
             "system": base_params["system"],
         }
         return self.client.messages.create(**final_params).content[0].text
-
