@@ -71,3 +71,20 @@ def error_search_results():
 @pytest.fixture
 def mock_vector_store():
     return MagicMock()
+
+
+@pytest.fixture
+def mock_rag_system():
+    """Return a fully configured mock RAGSystem for use across test files."""
+    mock = MagicMock()
+    mock.query.return_value = (
+        "Test answer",
+        [{"label": "Course A - Lesson 1", "url": "http://example.com"}],
+    )
+    mock.session_manager.create_session.return_value = "auto-created-session"
+    mock.session_manager.get_conversation_history.return_value = None
+    mock.get_course_analytics.return_value = {
+        "total_courses": 2,
+        "course_titles": ["Python Basics", "Advanced Python"],
+    }
+    return mock
