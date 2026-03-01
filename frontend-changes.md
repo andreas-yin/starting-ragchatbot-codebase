@@ -140,3 +140,41 @@ To auto-format instead:
 ```bash
 uv run black backend/
 ```
+
+---
+
+# Testing Framework Changes
+
+## Files Modified
+
+### `pyproject.toml`
+- Added `httpx>=0.27.0` to dev dependencies (required by FastAPI's TestClient)
+- Added `[tool.pytest.ini_options]` section:
+  - `testpaths = ["backend/tests"]` — pytest discovers tests without needing `-p` flags
+  - `pythonpath = ["backend"]` — backend modules resolve without manual `sys.path` hacks
+
+### `backend/tests/conftest.py`
+- Added `mock_rag_system` fixture — a fully configured `MagicMock` with:
+  - `query()` returning `("Test answer", [{"label": ..., "url": ...}])`
+  - `session_manager.create_session()` returning `"auto-created-session"`
+  - `session_manager.get_conversation_history()` returning `None`
+  - `get_course_analytics()` returning 2 courses with titles
+
+## Files Created
+
+### `backend/tests/test_app.py`
+API endpoint tests using FastAPI's `TestClient`. Because `app.py` mounts static
+files from `../frontend` (which does not exist in the test environment) and
+instantiates `RAGSystem` at import time, a minimal inline test app is defined
+instead — it mirrors the same endpoint logic and accepts a mock RAGSystem via
+closure.
+
+**Endpoints tested:**
+
+| Endpoint | Scenarios |
+|---|---|
+| `POST /api/query` | 200 happy path, echoes session_id, returns answer + sources, auto-creates session when omitted, 422 on missing `query` field, 500 + detail on RAGSystem error |
+| `GET /api/courses` | 200 happy path, correct total_courses count, correct course_titles list, 500 + detail on analytics error |
+| `DELETE /api/session/{id}` | 200 + `{"status": "ok"}` body, delegates to `session_manager.clear_session` |
+
+Total new tests: **19** (all passing, full suite: 53/53).
